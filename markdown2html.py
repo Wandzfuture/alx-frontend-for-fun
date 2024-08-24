@@ -1,0 +1,143 @@
+#!/usr/bin/python3
+"""
+A script that converts a Markdown file to HTML.
+
+Usage: ./markdown2html.py <input_file> <output_file>
+"""
+
+import sys
+import os
+import re
+
+
+def parse_headings(line):
+    """
+    Parse Markdown headings and convert them to HTML.
+    """
+    heading_pattern = r'^(#{1,6})\s(.+)$'
+    match = re.match(heading_pattern, line)
+    if match:
+        level = len(match.group(1))
+        content = match.group(2)
+        return f"<h{level}>{content}</h{level}>\n"
+    return None
+
+def parse_unordered_list(lines):
+    """
+    Parse Markdown unordered list and convert it to HTML.
+    """
+    if not lines or not lines[0].startswith('- '):
+        return None
+
+    html_list = ["<ul>"]
+    for line in lines:
+        if line.startswith('- '):
+            item = line[2:].strip()
+            html_list.append(f"<li>{item}</li>")
+        else:
+            break
+    html_list.append("</ul>")
+    return '\n'.join(html_list) + '\n', len(html_list) - 2
+
+def parse_ordered_list(lines):
+    """
+    Parse Markdown ordered list and convert it to HTML.
+    """
+    if not lines or not lines[0].startswith('* '):
+        return None
+
+    html_list = ["<ol>"]
+    for line in lines:
+        if line.startswith('* '):
+            item = line[2:].strip()
+            html_list.append(f"<li>{item}</li>")
+        else:
+            break
+    html_list.append("</ol>")
+    return '\n'.join(html_list) + '\n', len(html_list) - 2
+
+def parse_paragraph(lines):
+    """
+    Parse Markdown paragraph and convert it to HTML.
+    """
+    if not lines or lines[0].strip() == '':
+        return None
+
+    html_para = ["<p>"]
+    for i, line in enumerate(lines):
+        if line.strip() == '':
+            break
+        if i > 0:
+            html_para.append("<br/>")
+        html_para.append(line.strip())
+    html_para.append("</p>")
+    return '\n'.join(html_para) + '\n', len(html_para) - 2
+
+def convert_markdown_to_html(input_file, output_file):
+    """
+    Convert Markdown content to HTML.
+    """
+    with open(input_file, 'r') as md_file, open(output_file, 'w') as html_file:
+        lines = md_file.readlines()
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            
+            # Check for headings
+            heading = parse_headings(line)
+            if heading:
+                html_file.write(heading)
+                i += 1
+                continue
+            
+            # Check for unordered list
+            ul_result = parse_unordered_list(lines[i:])
+            if ul_result:
+                html_list, items_count = ul_result
+                html_file.write(html_list)
+                i += items_count
+                continue
+            
+            # Check for ordered list
+            ol_result = parse_ordered_list(lines[i:])
+            if ol_result:
+                html_list, items_count = ol_result
+                html_file.write(html_list)
+                i += items_count
+                continue
+            
+            # Check for paragraph
+            para_result = parse_paragraph(lines[i:])
+            if para_result:
+                html_para, lines_count = para_result
+                html_file.write(html_para)
+                i += lines_count
+                continue
+            
+            # If not a special element, move to next line
+            i += 1
+
+def main():
+    """
+    Main function to handle the Markdown to HTML conversion process.
+    """
+    # Check if the correct number of arguments is provided
+    if len(sys.argv) < 3:
+        sys.stderr.write("Usage: ./markdown2html.py README.md README.html\n")
+        sys.exit(1)
+
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+
+    # Check if the input file exists
+    if not os.path.exists(input_file):
+        sys.stderr.write(f"Missing {input_file}\n")
+        sys.exit(1)
+
+    # Convert Markdown to HTML
+    convert_markdown_to_html(input_file, output_file)
+
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()
